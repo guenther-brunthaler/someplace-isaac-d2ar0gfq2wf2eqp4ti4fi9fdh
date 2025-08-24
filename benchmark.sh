@@ -1,5 +1,5 @@
 #! /bin/sh
-# v2025.236
+# v2025.236.1
 
 BENCH_SRC=isaac.c
 RESULT_COLLECTION=timings.txt
@@ -14,7 +14,8 @@ external_helpers="times2ms:$r1"
 # No need to modify below this line.
 export LC_NUMERIC=C # Unclear why this is needed.
 unset LC_ALL # Avoid overriding LC_NUMERIC.
-BENCH_EXE=${BENCH_SRC%.*}
+self=`basename -- "$0"`
+bench_exe=${BENCH_SRC%.*}
 exec 8> /dev/null
 for tool in $external_helpers
 do
@@ -30,14 +31,15 @@ do
 	echo "popular free hosting service for Git."
 	false || exit
 done >& 2
-make -s "$BENCH_EXE"
+make -s "$bench_exe"
 (
 	dd if=/dev/zero bs=$SEEDSZ count=1 2>& 8 \
-	| ./"$BENCH_EXE" \
+	| ./"$bench_exe" \
 	| dd bs=$BLKSZ count=$BLKS 2>& 8 \
 	>& 8
 	times
 ) | times2ms \
 | { tr '\n' ' ' && cksum "$BENCH_SRC"; } \
+| { tr '\n' ' ' && cksum "$self"; } \
 | tee -a "$RESULT_COLLECTION"
 exec 8>& -
