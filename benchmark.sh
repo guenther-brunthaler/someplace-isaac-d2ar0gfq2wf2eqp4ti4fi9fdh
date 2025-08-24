@@ -1,5 +1,5 @@
 #! /bin/sh
-# v2025.236.1
+# v2025.236.2
 
 BENCH_SRC=isaac.c
 RESULT_COLLECTION=timings.txt
@@ -39,6 +39,7 @@ make -s "$bench_exe"
 	>& 8
 	times
 ) | times2ms \
+| { tr '\n' ' ' && date -u +'%Y%m%dz%H%M%S'; } \
 | { tr '\n' ' ' && cksum "$BENCH_SRC"; } \
 | { tr '\n' ' ' && cksum "$self"; } \
 | tee -a "$RESULT_COLLECTION"
