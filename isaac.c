@@ -2,7 +2,7 @@
  * isaac - cryptographically secure pseudo-random bytestream generator using
  * the ISAAC (Indirection, Shift, Accumulate, Add and Count) algorithm.
  *
- * Version 2025.236.3
+ * Version 2025.236.4
  * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
@@ -39,9 +39,11 @@
 
 #define DIM(array) (sizeof (array) / sizeof *(array))
 
+#define SIZE 256
+
 int main(int argc, char **argv) {
    /* ISAAC. */
-   static unsigned char be[4 * 256]; /* Big endian packed I/O buffer. */
+   static unsigned char be[4 * SIZE]; /* Big endian packed I/O buffer. */
    (void)argv;
    if (argc > 1 || fread(be, 1, sizeof be, stdin) != sizeof be) {
       (void)fprintf(
@@ -57,7 +59,7 @@ int main(int argc, char **argv) {
       failed: return EXIT_FAILURE;
    }
    {
-      static ufast32 s[256]; /* Internal state or seed. */
+      static ufast32 s[SIZE]; /* Internal state or seed. */
       {
          int i, j;
          for (i = j = 0; i < (int)DIM(be); ++i) {
@@ -72,12 +74,12 @@ int main(int argc, char **argv) {
          ufast32 b; /* Last result. */
          ufast32 c; /* Counter, guarantees minimum cycle length. */
          /* Result. Next batch of generated random numbers. */
-         static ufast32 r[256];
+         static ufast32 r[SIZE];
          for (a = b = c = 0; ; ) {
             int i;
             c = LOWER32(c + 1);
             b = LOWER32(b + c);
-            for (i = 0; i < 256; ++i) {
+            for (i = 0; i < SIZE; ++i) {
                static int lshift[4] = {13, -6, 2, -16};
                int lshift_bits = lshift[i & 3];
                assert(a <= BITMASK_32);
@@ -87,7 +89,7 @@ int main(int argc, char **argv) {
                   : a >> -lshift_bits
                );
                assert(a <= BITMASK_32);
-               a = LOWER32(a + s[LOWER8(i + 128)]);
+               a = LOWER32(a + s[LOWER8(i + (SIZE >> 1))]);
                {
                   ufast32 x, y;
                   assert(s[i] <= BITMASK_32);
