@@ -2,7 +2,7 @@
  * isaac - cryptographically secure pseudo-random bytestream generator using
  * the ISAAC (Indirection, Shift, Accumulate, Add and Count) algorithm.
  *
- * Version 2025.236.1
+ * Version 2025.236.2
  * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
@@ -15,10 +15,27 @@
 #include <errno.h>
 #include <assert.h>
 
-#if UINT_MAX >= 0xffffffff
+#define BITMASK_8 0xffu
+#define LOWER8(x) ((x) & BITMASK_8)
+
+#define BITMASK_32 0xffffffffu
+#if ULLONG_MAX >= BITMASK_32
+   typedef unsigned long long int ufast32;
+   #define UFAST32_MAX ULLONG_MAX
+#elif UINT_MAX >= BITMASK_32
    typedef unsigned int ufast32;
-#else
+   #define UFAST32_MAX UINT_MAX
+#elif ULONG_MAX >= BITMASK_32
    typedef unsigned long ufast32;
+   #define UFAST32_MAX ULONG_MAX
+#else
+   #error "C89 requires <unsigned long> to be at least 32 bit wide!"
+#endif
+
+#if UFAST32_MAX == BITMASK_32
+   #define LOWER32(x) (x)
+#else
+   #define LOWER32(x) ((x) & BITMASK_32)
 #endif
 
 #define DIM(array) (sizeof (array) / sizeof *(array))
@@ -57,17 +74,24 @@ int main(int argc, char **argv) {
    a = b = c = 0;
    for (;;) {
       int i;
-      b += ++c;
+      c = LOWER32(c + 1);
+      b = LOWER32(b + c);
       for (i = 0; i < 256; ++i) {
          static int lshift[4] = {13, -6, 2, -16};
          int lshift_bits = lshift[i & 3];
-         a ^= (lshift_bits > 0 ? a << lshift_bits : a >> -lshift_bits);
-         a += s[(i + 128) & 0xff];
+         assert(a <= BITMASK_32);
+         a ^= (
+            lshift_bits > 0
+            ? LOWER32(a << lshift_bits)
+            : a >> -lshift_bits
+         );
+         assert(a <= BITMASK_32);
+         a = LOWER32(a + s[LOWER8(i + 128)]);
          {
-            int x, y;
-            x = s[i];
-            y = s[i] = a + b + s[x >> 2 & 0xff];
-            r[i] = b = x + s[y >> 10 & 0xff];
+            ufast32 x, y;
+            assert(s[i] <= BITMASK_32);
+            y = s[i] = LOWER32(a + b + s[LOWER8((x = s[i]) >> 2)]);
+            b = r[i] = LOWER32(x + s[LOWER8(y >> 10)]);
          }
       }
       {
@@ -75,7 +99,7 @@ int main(int argc, char **argv) {
          for (i = j = 0; i < (int)DIM(be); ++i) {
             ufast32 v;
             if (!(i & 3)) v = r[j++];
-            be[(i & ~3) + (3 - (i & 3))] = v & 0xff;
+            be[(i & ~3) + (3 - (i & 3))] = LOWER8(v);
             v >>= 8;
          }
       }
