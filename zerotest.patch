@@ -1,5 +1,13 @@
+Add a feature test macro to isaac.c which enables a special test mode.
+
+In that mode, if a seed of 1024 zero-bytes is used, the contents of some
+internal variables are verified to contain certain well-known intermediate
+values.
+
+A diagnostic message will be written to standard error at that point.
+
 --- isaac-crc_1343251918.c	2025-08-24 12:18:12.569312460 +0000
-+++ isaac-crc_21849986.c	2025-08-24 12:15:30.249312557 +0000
++++ isaac.c	2025-08-24 12:15:30.249312557 +0000
 @@ -10,8 +10,8 @@
   * If any error condition occurs, the program calls abort(), which will
   * typically terminate with signal SIGABRT.
