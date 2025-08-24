@@ -1,5 +1,5 @@
 .POSIX:
-# v2025.236
+# v2025.236.1
 
 # You may redefine these settings via the "make" command line or export them
 # as environment variables and (in the latter case only) also
@@ -9,7 +9,7 @@ CFLAGS = -D NDEBUG -O
 LDFLAGS = -s
 
 # No need to redefine these.
-TARGETS = isaac
+TARGETS = isaac endian_swap32
 
 .PHONY: all clean test
 

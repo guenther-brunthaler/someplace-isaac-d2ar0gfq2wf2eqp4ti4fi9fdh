@@ -2,7 +2,7 @@
  * isaac - cryptographically secure pseudo-random bytestream generator using
  * the ISAAC (Indirection, Shift, Accumulate, Add and Count) algorithm.
  *
- * Version 2025.236.4
+ * Version 2025.236.5
  * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
@@ -14,6 +14,10 @@
 #include <limits.h>
 #include <errno.h>
 #include <assert.h>
+
+#if CHAR_BIT != 8
+   #error "Sorry, but this implementation only works with 8-bit bytes!"
+#endif
 
 #define BITMASK_8 0xffu
 #define LOWER8(x) ((x) & BITMASK_8)
@@ -39,22 +43,41 @@
 
 #define DIM(array) (sizeof (array) / sizeof *(array))
 
+/* The array size (of 32 bit words) ISAAC uses for its input and result. */
 #define SIZE 256
 
 int main(int argc, char **argv) {
-   /* ISAAC. */
-   static unsigned char be[4 * SIZE]; /* Big endian packed I/O buffer. */
+   /* Big endian packed I/O buffer. */
+   static unsigned char le[32 / CHAR_BIT * SIZE];
    (void)argv;
-   if (argc > 1 || fread(be, 1, sizeof be, stdin) != sizeof be) {
+   if (argc > 1 || fread(le, 1, sizeof le, stdin) != sizeof le) {
       (void)fprintf(
             stderr
-         ,  "Feed exactly 1024 bytes as binary random seed"
-            " via standard input!\n"
+         ,  "Feed exactly 1024 octets (= 8-bit bytes) as binary"
+            " random seed via standard input!\n"
             "\n"
-            "Then read as many pseudorandom bytes as needed from standard"
-            " output (which should be a pipe) and close the pipe when done."
-            " Be sure to check the return status of this program in order"
-            " to dectect any errors.\n"
+            "Then read as many cryptographically strong pseudorandom"
+            " octets as needed from this program's standard output"
+            " (which should be a pipe) and stop reading (or close the"
+            " pipe) when done.\n"
+            "\n"
+            "Be sure to check the return status of this program in"
+            " order to dectect any errors.\n"
+            "\n"
+            "The seed must contain enough entropy for your"
+            " application's security requirements.\n"
+            "\n"
+            "If you use this program for hashing the seed, throw away"
+            " the first 8 blocks of 1024 octets because they might"
+            " not be very random yet. The generator needs some time"
+            " to 'warm up' in this case. This is not necessary if the"
+            " seed already has high entropy.\n"
+            "\n"
+            "This implementation will interpret the seed as an array"
+            " of unsigned little-endian 32-bit integers before"
+            " passing them on to the ISAAC algorithm, and the"
+            " algorithm's output will be written to standard output"
+            " in the same format.\n"
       );
       failed: return EXIT_FAILURE;
    }
@@ -62,13 +85,14 @@ int main(int argc, char **argv) {
       static ufast32 s[SIZE]; /* Internal state or seed. */
       {
          int i, j;
-         for (i = j = 0; i < (int)DIM(be); ++i) {
+         for (i = j = 0; i < (int)DIM(le); ++i) {
             ufast32 v;
-            if (!(i & 3)) v = 0; else v <<= 8;
-            v += be[i];
+            if ((i & 3) == 0) v = 0;
+            v |= le[i] << (i & 3);
             if ((i & 3) == 3) s[j++] = v;
          }
       }
+      /* ISAAC. */
       {
          ufast32 a; /* Entropy acumulator. */
          ufast32 b; /* Last result. */
@@ -99,14 +123,14 @@ int main(int argc, char **argv) {
             }
             {
                int i, j;
-               for (i = j = 0; i < (int)DIM(be); ++i) {
+               for (i = j = 0; i < (int)DIM(le); ++i) {
                   ufast32 v;
-                  if (!(i & 3)) v = r[j++];
-                  be[(i & ~3) + (3 - (i & 3))] = LOWER8(v);
+                  if ((i & 3) == 0) v = r[j++];
+                  le[i] = LOWER8(v);
                   v >>= 8;
                }
             }
-            if (fwrite(be, 1, sizeof be, stdout) != sizeof be) {
+            if (fwrite(le, 1, sizeof le, stdout) != sizeof le) {
                int e = errno;
                if (ferror(stdout) && e == EPIPE) break;
                goto failed;
