@@ -10,8 +10,8 @@
  * If any error condition occurs, the program calls abort(), which will
  * typically terminate with signal SIGABRT.
  *
- * Version 2024.294
- * Copyright (c) 2024 Guenther Brunthaler. All rights reserved.
+ * Version 2025.236
+ * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
  * Distribution is permitted under the terms of the GPLv3.
@@ -22,12 +22,6 @@
 #include <limits.h>
 #include <errno.h>
 #include <assert.h>
-
-#if 0
-   /* Verify known intermediate values after 10 rounds with initial all-zero
-   \* seed. See FSE 1996 Conference paper (LNCS 1039), page 46. */
-   #define ZEROTEST
-#endif
 
 #if UINT_MAX >= 0xffffffff
    typedef unsigned int uword32;
@@ -45,9 +39,6 @@ int main(int argc, char **argv) {
    static uword32 s[256]; /* Internal state or seed. */
    static uword32 r[256]; /* Result. Next batch of generated random numbers. */
    static unsigned char be[4 * 256]; /* Big endian packed I/O buffer. */
-   #ifdef ZEROTEST
-   static int all_zero_seed;
-   #endif
    (void)argv;
    if (argc > 1 || fread(be, 1, sizeof s, stdin) != sizeof be) {
       (void)fprintf(
@@ -69,18 +60,6 @@ int main(int argc, char **argv) {
          if ((i & 3) == 3) s[j++] = v;
       }
    }
-   #ifdef ZEROTEST
-   {
-      int i;
-      all_zero_seed = 1;
-      for (i = 256; i--; ) {
-         if (s[i] != 0) {
-            all_zero_seed = 0;
-            break;
-         }
-      }
-   }
-   #endif
    a = b = c = 0;
    for (;;) {
       int i;
@@ -94,16 +73,6 @@ int main(int argc, char **argv) {
          int y = s[i] = a + b + s[x >> 2 & 0xff];
          r[i] = b = x + s[y >> 10 & 0xff];
       }
-      #ifdef ZEROTEST
-         if (c == 10 && all_zero_seed) {
-            if (a == 0xd4d3f473u && b == 0x902c0691u && c == 0x0000000au) {
-               (void)fputs("ZEROTEST succeeded!\n", stderr);
-            } else {
-               (void)fputs("ZEROTEST failed!\n", stderr);
-               abort();
-            }
-         }
-      #endif
       {
          int i, j;
          for (i = j = 0; i < (int)DIM(be); ++i) {
