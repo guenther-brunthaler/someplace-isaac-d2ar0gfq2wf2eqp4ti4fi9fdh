@@ -2,7 +2,7 @@
  * isaac - cryptographically secure pseudo-random bytestream generator using
  * the ISAAC (Indirection, Shift, Accumulate, Add and Count) algorithm.
  *
- * Version 2025.236.5
+ * Version 2025.239
  * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
  *
  * This source file is free software.
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
          for (i = j = 0; i < (int)DIM(le); ++i) {
             ufast32 v;
             if ((i & 3) == 0) v = 0;
-            v |= le[i] << (i & 3);
+            v |= le[i] << ((i & 3) << 3);
             if ((i & 3) == 3) s[j++] = v;
          }
       }
