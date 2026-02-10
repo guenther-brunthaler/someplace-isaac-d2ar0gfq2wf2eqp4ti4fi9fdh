@@ -1,5 +1,5 @@
 .POSIX:
-# v2025.236.1
+# v2026.41
 
 # You may redefine these settings via the "make" command line or export them
 # as environment variables and (in the latter case only) also
@@ -30,3 +30,8 @@ test: isaac
 	else \
 		echo "Test FAILED!"; \
 	fi
+
+benchmark:
+	@make -s clean
+	@(unset CPPFLAGS CFLAGS LDFLAGS && make -s)
+	@sh bm_helper.sh

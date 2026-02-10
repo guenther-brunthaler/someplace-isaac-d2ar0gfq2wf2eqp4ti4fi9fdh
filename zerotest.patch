@@ -6,75 +6,72 @@ values.
 
 A diagnostic message will be written to standard error at that point.
 
---- isaac-crc_1343251918.c	2025-08-24 12:18:12.569312460 +0000
-+++ isaac.c	2025-08-24 12:15:30.249312557 +0000
-@@ -10,8 +10,8 @@
-  * If any error condition occurs, the program calls abort(), which will
-  * typically terminate with signal SIGABRT.
-  *
-- * Version 2025.236
-- * Copyright (c) 2024-2025 Guenther Brunthaler. All rights reserved.
-+ * Version 2024.294
-+ * Copyright (c) 2024 Guenther Brunthaler. All rights reserved.
-  *
-  * This source file is free software.
-  * Distribution is permitted under the terms of the GPLv3.
-@@ -23,6 +23,12 @@
+--- isaac-crc_2767905519.c	2026-02-10 05:37:46.148424483 +0000
++++ isaac.c	2026-02-10 04:02:52.967291525 +0000
+@@ -17,6 +17,20 @@
  #include <errno.h>
  #include <assert.h>
  
 +#if 0
-+   /* Verify known intermediate values after 10 rounds with initial all-zero
-+   \* seed. See FSE 1996 Conference paper (LNCS 1039), page 46. */
++   /* Add special verification code.
++   |*
++   |* If a seed of all-zero bytes is detected, the program will verify that
++   |* certain known intermediate values match after 10 rounds. A diagnostic
++   |* message will then be written to stderr. The output written to stdout
++   |* will not change if this test is successful. Otherwise, the program
++   |* will abort with an error message.
++   |*
++   |* See FSE 1996 Conference paper (LNCS 1039) page 46 for details about
++   \* the well-known values for an all-zero seed. */
 +   #define ZEROTEST
 +#endif
 +
- #if UINT_MAX >= 0xffffffff
-    typedef unsigned int uword32;
- #else
-@@ -39,6 +45,9 @@
-    static uword32 s[256]; /* Internal state or seed. */
-    static uword32 r[256]; /* Result. Next batch of generated random numbers. */
-    static unsigned char be[4 * 256]; /* Big endian packed I/O buffer. */
+ #if CHAR_BIT != 8
+    #error "Sorry, but this implementation only works with 8-bit bytes!"
+ #endif
+@@ -51,6 +65,9 @@
+ int main(int argc, char **argv) {
+    /* Little endian packed I/O buffer. */
+    static unsigned char le[32 / CHAR_BIT * SIZE];
 +   #ifdef ZEROTEST
 +   static int all_zero_seed;
 +   #endif
     (void)argv;
-    if (argc > 1 || fread(be, 1, sizeof s, stdin) != sizeof be) {
+    if (argc > 1 || fread(le, 1, sizeof le, stdin) != sizeof le) {
        (void)fprintf(
-@@ -60,6 +69,18 @@
-          if ((i & 3) == 3) s[j++] = v;
-       }
-    }
-+   #ifdef ZEROTEST
-+   {
-+      int i;
-+      all_zero_seed = 1;
-+      for (i = 256; i--; ) {
-+         if (s[i] != 0) {
-+            all_zero_seed = 0;
-+            break;
-+         }
-+      }
-+   }
-+   #endif
-    a = b = c = 0;
-    for (;;) {
-       int i;
-@@ -73,6 +94,16 @@
-          int y = s[i] = a + b + s[x >> 2 & 0xff];
-          r[i] = b = x + s[y >> 10 & 0xff];
-       }
-+      #ifdef ZEROTEST
-+         if (c == 10 && all_zero_seed) {
-+            if (a == 0xd4d3f473u && b == 0x902c0691u && c == 0x0000000au) {
-+               (void)fputs("ZEROTEST succeeded!\n", stderr);
-+            } else {
-+               (void)fputs("ZEROTEST failed!\n", stderr);
-+               abort();
+@@ -104,6 +121,18 @@
+          ufast32 c; /* Counter, guarantees minimum cycle length. */
+          /* Result. Next batch of generated random numbers. */
+          static ufast32 r[SIZE];
++         #ifdef ZEROTEST
++         {
++            int i;
++            all_zero_seed = 1;
++            for (i = 256; i--; ) {
++               if (s[i] != 0) {
++                  all_zero_seed = 0;
++                  break;
++               }
 +            }
 +         }
-+      #endif
-       {
-          int i, j;
-          for (i = j = 0; i < (int)DIM(be); ++i) {
++         #endif
+          for (a = b = c = 0; ; ) {
+             int i;
+             c = LOWER32(c + 1);
+@@ -126,6 +155,16 @@
+                   b = r[i] = LOWER32(x + s[LOWER8(y >> 10)]);
+                }
+             }
++            #ifdef ZEROTEST
++               if (c == 10 && all_zero_seed) {
++                  if (a == 0xd4d3f473u && b == 0x902c0691u && c == 0x0000000au) {
++                     (void)fputs("ZEROTEST succeeded!\n", stderr);
++                  } else {
++                     (void)fputs("ZEROTEST failed!\n", stderr);
++                     abort();
++                  }
++               }
++            #endif
+             {
+                /* Native-endian r[] to little-endian le[] output conversion. */
+                int i, j;
