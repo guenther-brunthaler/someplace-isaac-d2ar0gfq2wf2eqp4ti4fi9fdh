@@ -1,10 +1,10 @@
 char const SHORT_DESCRIPTION[] = \
-   "isaac - cryptographically secure pseudo-random bytestream generator\n"
-   "using the ISAAC (Indirection, Shift, Accumulate, Add and Count)"
+   "isaac - cryptographically secure pseudo-random bytestream generator"
+   " using the ISAAC (Indirection, Shift, Accumulate, Add and Count)"
    " algorithm.\n"
 ;
 char const VERSION[] = \
-   "Version 2026.41\n"
+   "Version 2026.310\n"
    "Copyright (c) 2024-2026 Guenther Brunthaler. All rights reserved.\n"
    "\n"
    "This source file is free software.\n"
@@ -59,9 +59,10 @@ int main(int argc, char **argv) {
             "Feed exactly 1024 octets (= 8-bit bytes) as binary"
             " random seed via standard input!\n"
             "\n"
-            "Then read as many cryptographically strong pseudorandom"
-            " octets as needed from this program's standard output"
-            " (which should be a pipe) and stop reading (or close the"
+            "Then read as many cryptographically strong"
+            " pseudorandom octets as needed from this program's"
+            " standard output (which should be a pipe) in blocks"
+            " of 1024 octets and stop reading (or close the"
             " pipe) when done.\n"
             "\n"
             "Be sure to check the return status of this program in"
